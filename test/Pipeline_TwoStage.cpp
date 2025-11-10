@@ -11,11 +11,21 @@ int main(int argc, char* argv[])
         return 1;
     }
     initializeLogger();
+    RtspUrlManager                   rtsp_manager(argv[2]);
+    const std::vector<GpuRtspGroup>  gpu_groups   = rtsp_manager.getGpuGroups();
+    if (gpu_groups.empty() || gpu_groups.size() > 1){
+        logger->error("No GPU groups found in the RTSP configuration or multiple GPU groups found. This test only supports a single GPU group.");
+        return 1;
+    }
+
+    if (gpu_groups[0].device_id != std::stoi(argv[1])){
+        logger->error("The device ID provided does not match the device ID in the RTSP configuration.");
+        return 1;
+    }
+    const std::vector<RtspUrlParams> rtsp_sources = gpu_groups[0].rtsp_params;
+
     int       dev       = std::stoi(argv[1]);
     CUcontext cuContext = Init(dev);
-
-    RtspUrlManager                   rtsp_manager(argv[2]);
-    const std::vector<RtspUrlParams> rtsp_sources = rtsp_manager.getUrls();
 
     std::ifstream pipe_file("../config/pipeline_two_stage.json");
     json          pipe_json;

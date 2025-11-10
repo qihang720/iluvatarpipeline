@@ -24,6 +24,12 @@ struct RtspUrlParams
     int         rate;
 };
 
+struct GpuRtspGroup
+{
+    int device_id;
+    std::vector<RtspUrlParams> rtsp_params;
+};
+
 namespace nlohmann
 {
 template <>
@@ -57,6 +63,21 @@ struct adl_serializer<RtspUrlParams>
         j.at("rate").get_to(params.rate);
     }
 };
+
+template <>
+struct adl_serializer<GpuRtspGroup>
+{
+    static void from_json(const json& j, GpuRtspGroup& group)
+    {
+        j.at("device_id").get_to(group.device_id);
+        j.at("rtsp_params").get_to(group.rtsp_params);
+    }
+
+    static void to_json(json& j, const GpuRtspGroup& group)
+    {
+        j = json{{"device_id", group.device_id}, {"rtsp_params", group.rtsp_params}};
+    }
+};
 }  // namespace nlohmann
 
 void from_json(const json& j, std::vector<std::string>& vec);
@@ -66,19 +87,21 @@ class RtspUrlManager
 public:
     RtspUrlManager(const std::string& file_path) { loadFromFile(file_path); }
 
-    const std::vector<RtspUrlParams>& getUrls() const { return rtsp_params; }
+    const std::vector<GpuRtspGroup>& getGpuGroups() const { return gpu_groups; }
 
 private:
-    std::vector<RtspUrlParams> rtsp_params;
+    std::vector<GpuRtspGroup> gpu_groups;
 
     void loadFromFile(const std::string& file_path)
     {
         std::ifstream file(file_path);
-        if (file.is_open())
+        if (!file.is_open())
         {
-            json j;
-            file >> j;
-            j.at("rtsp_params").get_to(rtsp_params);
+            throw std::runtime_error("Failed to open config file: " + file_path);
         }
+
+        json j;
+        file >> j;
+        j.at("gpu_devices").get_to(gpu_groups);
     }
 };

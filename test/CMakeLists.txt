@@ -3,3 +3,6 @@ target_link_libraries(pipeline1 ix_pipeline_help)
 
 add_executable(pipeline2 Pipeline_TwoStage.cpp)
 target_link_libraries(pipeline2 ix_pipeline_help)
+
+add_executable(pipeline1_multi Pipeline_OneStage_multi.cpp)
+target_link_libraries(pipeline1_multi ix_pipeline_help)

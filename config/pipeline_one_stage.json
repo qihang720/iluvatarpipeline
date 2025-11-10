@@ -13,7 +13,7 @@
             "nms_output0",
             "int_output1"
         ],
-        "onnx_file": "../models/yolov5/yolov5s_sim_cut_withnms.onnx",
-        "engine_file": "../models/yolov5/yolov5s_sim_cut_withnms.engine"
+        "onnx_file": "../models/yolov5-v6/yolov5s_sim_cut_withnms.onnx",
+        "engine_file": "../models/yolov5-v6/yolov5s_sim_cut_withnms.engine"
     }
 }

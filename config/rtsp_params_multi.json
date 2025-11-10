@@ -1,0 +1,19 @@
+{
+    "gpu_devices": [
+        {
+            "device_id": 0,
+            "rtsp_params": [
+                { "rtsp_url": "rtsp://10.207.16.31:554/baidu/video_h264_1080p.mp4", "rate": 10 },
+                { "rtsp_url": "rtsp://10.207.16.31:554/baidu/video_h264_1080p.mp4", "rate": 10 }
+            ]
+        },
+        {
+            "device_id": 1,
+            "rtsp_params": [
+                { "rtsp_url": "rtsp://10.207.16.31:554/baidu/video_h264_1080p.mp4", "rate": 10 },
+                { "rtsp_url": "rtsp://10.207.16.31:554/baidu/video_h264_1080p.mp4", "rate": 10 },
+                { "rtsp_url": "rtsp://10.207.16.31:554/baidu/video_h264_1080p.mp4", "rate": 10 }
+            ]
+        }
+    ]
+}

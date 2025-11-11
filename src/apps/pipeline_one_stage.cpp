@@ -200,6 +200,15 @@ void YoloV5ModelProcessor::IxrtInfer()
     CudaCtxPush ctxPush(_m_cu_context);
     this->_m_thread_infer.set_status(false);
 
+#ifdef YOLOV5_VALIDATION_ENABLED
+    std::map<int, float> expected_label_score = {
+        {17, 0.922852f},
+        {3,  0.622559f},
+        {2,  0.559570f}
+    };
+    const float SCORE_TOL = 0.01f;
+#endif
+
     while (!this->_m_thread_infer.get_status())
     {
         int get_num = waitEnoughBatch(_m_preprocess_queue, number_from_q, 20, this->_m_thread_infer.get_status());
@@ -276,14 +285,38 @@ void YoloV5ModelProcessor::IxrtInfer()
 
             for (size_t j = 0; j < output1[i]; j++)
             {
-                // printf("batch：%d, box label:%f, score:%f  box:%f %f %f %f\n",
-                //        i,
-                //        output0[i * 6 * box_num + j * 6 + 4],
-                //        output0[i * 6 * box_num + j * 6 + 5],
-                //        output0[i * 6 * box_num + j * 6 + 0],
-                //        output0[i * 6 * box_num + j * 6 + 1],
-                //        output0[i * 6 * box_num + j * 6 + 2],
-                //        output0[i * 6 * box_num + j * 6 + 3]);
+#ifdef YOLOV5_VALIDATION_ENABLED
+                {
+                    int   label = static_cast<int>(output0[i * 6 * box_num + j * 6 + 4]);
+                    float score = output0[i * 6 * box_num + j * 6 + 5];
+                    float x0 = output0[i * 6 * box_num + j * 6 + 0];
+                    float y0 = output0[i * 6 * box_num + j * 6 + 1];
+                    float x1 = output0[i * 6 * box_num + j * 6 + 2];
+                    float y1 = output0[i * 6 * box_num + j * 6 + 3];
+
+                    auto it = expected_label_score.find(label);
+                    if (it == expected_label_score.end())
+                    {
+                        // label 不在预期列表中
+                        logger->error("[{} {}] batch {}: unexpected label {} (score={})", __FUNCTION__, __LINE__, i, label, score);
+                        logger->error("[{} {}] batch {}: box label={}, score={}, rect={} {} {} {}",
+                                    __FUNCTION__, __LINE__, i, label, score, x0, y0, x1, y1);
+                        assert(false); 
+                    }
+
+                    if (std::fabs(score - it->second) > SCORE_TOL)
+                    {
+                        logger->error("[{} {}] batch {}: label {} score mismatch! expected={}, got={}",
+                                    __FUNCTION__, __LINE__, i, label, it->second, score);
+                        logger->error("[{} {}] batch {}: box label={}, score={}, rect={} {} {} {}",
+                                    __FUNCTION__, __LINE__, i, label, score, x0, y0, x1, y1);
+                        assert(false); 
+                    }
+
+                    // logger->info("[{} {}] batch {}: box label={}, score={}, rect={} {} {} {}",
+                    //                 __FUNCTION__, __LINE__, i, label, score, x0, y0, x1, y1);
+                }
+#endif // YOLOV5_VALIDATION_ENABLED
 
                 int box_left =
                     clip<int>(static_cast<int>(output0[i * 6 * box_num + j * 6 + 0] / ratio), 0, oriSurf_width);

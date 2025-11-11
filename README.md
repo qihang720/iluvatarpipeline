@@ -31,8 +31,15 @@
    - rtsp_params.json:配置视频流参数，请修改所有的`rtsp_url`为真实数据流
    ```bash
    {
-      "rtsp_url": "rtsp://0.0.0.0:554/test.mp4", #视频流名字
-      "rate": 10  #每秒抽帧数，-1则不抽帧
+      "gpu_devices": [
+         {
+               "device_id": 0,
+               "rtsp_params": [
+                  { "rtsp_url": "rtsp://10.207.16.31:554/static/dog.mp4", "rate": 1 },
+                  { "rtsp_url": "rtsp://10.207.16.31:554/static/dog.mp4", "rate": 1 }
+               ]
+         }
+      ]
    }
    ```
 
@@ -106,13 +113,26 @@
    ./pipeline1 0 ../config/rtsp_params.json
    ```
 
+   - pipeline1_multi: 单阶段多gpu模型推理，仅使用yolov5作为推理,log日志进入log文件下查看。
+   第一个参数为device id，第二个参数为rtsp配置文件路径, device_id和rtsp配置中的device_id需要保持一致。
+   ```bash
+   ./pipeline1_multi 0,1 ../config/rtsp_params_multi.json
+   ```
+
    - pipeline2: 二阶段模型推理，先进行ppyoloe检测，在进行pplcnet推理
    第一个参数为device id，第二个参数为rtsp配置文件路径
    ```bash
    ./pipeline2 0 ../config/rtsp_params.json
    ```
 
-5. **效果展示:** 
+5. **yolov5精度验证：**
+
+   - CMakeLists中设置 `ENABLE_YOLOV5_VALIDATION ON`,参考1重新编译。
+   - 使用`iluvatarpipeline/models/yolov5-v6/dog_1080p.mp4`作为视频输入，配置rtsp_params.json，运行。
+   - 参考代码`iluvatarpipeline/src/apps/pipeline_one_stage.cpp:203-210,288-319;`
+   `expected_label_score` 中数据仅针对`crpi-92uj7jb20gffz04j.cn-guangzhou.personal.cr.aliyuncs.com/iluvatar_common/vllm0.9.2-4.3.0-x86:v1`，不同版本精度可能会有细微差异，请调整`expected_label_score`.
+
+6. **效果展示:** 
    图中展示32路解码，每路抽取10帧结果。
    - frames表示处理图片数，FPS表示每秒处理图片数。
    - total:程序运行总时间内的各个模块统计结果

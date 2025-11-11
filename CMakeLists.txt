@@ -24,6 +24,11 @@ include_directories(inc)
 
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+option(ENABLE_YOLOV5_VALIDATION "Enable YoloV5 label/score validation" OFF)
+if(ENABLE_YOLOV5_VALIDATION)
+    add_definitions(-DYOLOV5_VALIDATION_ENABLED)
+endif()
+
 file(GLOB SRC_FILES src/*.cpp src/*/*.cpp  src/*/*/*.cpp src/*/*/*.cu)
 
 add_library(ix_pipeline_help SHARED ${SRC_FILES})

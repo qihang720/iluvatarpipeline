@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
 
     RtspUrlManager                   rtsp_manager(argv[2]);
     const std::vector<GpuRtspGroup>  gpu_groups   = rtsp_manager.getGpuGroups();
-    if (gpu_groups.size() <= 1){
-        logger->error("No GPU groups found in the RTSP configuration or multiple GPU groups found. This test only supports a single GPU group.");
+    if (gpu_groups.size() < 2){
+        logger->error("This test requires at least two GPU groups in the RTSP configuration.");
         return 1;
     }
 

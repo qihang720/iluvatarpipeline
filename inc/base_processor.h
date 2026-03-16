@@ -64,6 +64,27 @@ public:
     size_t GetDecoderReceiveFramesOK();
 };
 
+template <typename T>
+static int waitEnoughBatch(ProcessQueue<T>* queue, int batch, int delay_time, bool exit_signal)
+{
+    int timeout = 0;
+    int t_batch = 0;
+    while (timeout < 100)
+    {
+        if (exit_signal)
+        {
+            return 0;
+        }
+        t_batch = queue->size();
+        if (t_batch >= batch)
+            return batch;
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_time));
+
+        ++timeout;
+    }
+    return t_batch;
+}
+
 class ModelProcessor
 {
 protected:

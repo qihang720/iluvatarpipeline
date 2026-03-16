@@ -1,3 +1,6 @@
+add_executable(pipeline_bytetrack Pipeline_ByteTrack.cpp)
+target_link_libraries(pipeline_bytetrack ix_pipeline_help)
+
 add_executable(pipeline1 Pipeline_OneStage.cpp)
 target_link_libraries(pipeline1 ix_pipeline_help)
 

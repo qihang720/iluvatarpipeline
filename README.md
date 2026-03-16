@@ -103,13 +103,13 @@
    - pipeline1: 单阶段模型推理，仅使用yolov5作为推理,log日志进入log文件下查看。
    第一个参数为device id，第二个参数为rtsp配置文件路径
    ```bash
-   ./pipeline1 0 ../config/rtsp_params.json
+   ./test/pipeline1 0 ../config/rtsp_params.json
    ```
 
    - pipeline2: 二阶段模型推理，先进行ppyoloe检测，在进行pplcnet推理
    第一个参数为device id，第二个参数为rtsp配置文件路径
    ```bash
-   ./pipeline2 0 ../config/rtsp_params.json
+   ./test/pipeline2 0 ../config/rtsp_params.json
    ```
 
 5. **效果展示:** 
@@ -120,3 +120,28 @@
    - queue:各个模块队列中剩余的图片数和丢弃的图片数
    
    ![result](./result.png)
+
+## ByteTrack 接入
+
+`iluvatarpipeline` 现已支持直接加载带 `decoder+nms` 的 ByteTrack IxRT engine。
+
+1. 生成并同步模型
+```bash
+cd ./models/bytetrack
+bash run_convert_and_sync.sh
+```
+
+2. 使用 ByteTrack 配置
+```bash
+cat ./config/pipeline_bytetrack.json
+```
+
+3. 本地 mp4 快速验证
+```bash
+./test/pipeline_bytetrack 0 ../config/rtsp_params_bytetrack.json
+```
+
+说明：
+
+- ByteTrack 模型配置位于 `config/pipeline_bytetrack.json`
+- 示例视频配置位于 `config/rtsp_params_bytetrack_demo.json`

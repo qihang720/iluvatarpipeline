@@ -38,6 +38,14 @@ VideoStreamProcessor::VideoStreamProcessor(CUcontext                           c
                           {"max_delay", "1000000"},
                           {"rw_timeout", "1000000"}};
     }
+    else if (strstr(_input_file.c_str(), "udp://") != NULL)  // option for udp stream
+    {
+        ffmpeg_options = {{"buffer_size",      "10485760"},  // 10MB UDP socket recv buffer for 4K bitrate
+                          {"fifo_size",         "10000000"},  // FFmpeg internal FIFO to absorb bursts
+                          {"overrun_nonfatal",  "1"},         // drop frames on FIFO overflow instead of exiting
+                          {"reuse",             "1"}};
+    }
+
     demuxer             = new FFmpegDemuxer(_input_file.c_str(), ffmpeg_options);
     AVCodecID ff_Codec  = demuxer->GetVideoCodec();
     int       dec_codec = FFmpeg2IxCodecId(ff_Codec);

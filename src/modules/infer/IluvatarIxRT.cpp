@@ -396,6 +396,34 @@ void Trt::InitEngine()
     nbBindings = mEngine->getNbBindings();
     logger->info("[{} {}]: nbBingdings: {}", __FUNCTION__, __LINE__, nbBindings);
 
+    // Auto-detect dynamic-shape engine: if any input binding reports -1 in
+    // the batch dimension, the deserialized engine is dynamic.  This handles
+    // engines that were loaded via DeserializeEngine (which does not call
+    // AddDynamicShapeProfile, so mIsDynamicShape stays false by default).
+    if (!mIsDynamicShape)
+    {
+        for (int i = 0; i < nbBindings; i++)
+        {
+            if (mEngine->bindingIsInput(i))
+            {
+                auto dims = mEngine->getBindingDimensions(i);
+                if (dims.nbDims > 0 && dims.d[0] == -1)
+                {
+                    mIsDynamicShape = true;
+                    logger->info("[{} {}]: dynamic-shape engine detected automatically",
+                                 __FUNCTION__, __LINE__);
+                    break;
+                }
+            }
+        }
+    }
+
+    // For dynamic-shape engines, set the execution context to the maximum
+    // batch size so that output binding dimensions become concrete before we
+    // calculate allocation sizes.
+    if (mIsDynamicShape)
+        SetBindingDimensions(mBatchSize);
+
     mBindingSize.resize(nbBindings);
     mBindingName.resize(nbBindings);
     mBindingDims.resize(nbBindings);
@@ -404,11 +432,18 @@ void Trt::InitEngine()
     for (int i = 0; i < nbBindings; i++)
     {
         std::ostringstream oss;
-        nvinfer1::Dims     dims      = mEngine->getBindingDimensions(i);
-        nvinfer1::DataType dtype     = mEngine->getBindingDataType(i);
-        const char*        name      = mEngine->getBindingName(i);
+        // For dynamic-shape engines use the context dims (concrete after
+        // SetBindingDimensions), so output shapes like [batch, max_boxes, 4]
+        // are fully resolved before we compute the allocation size.
+        nvinfer1::Dims     dims  = mIsDynamicShape ?
+                                   mContext->getBindingDimensions(i) :
+                                   mEngine->getBindingDimensions(i);
+        nvinfer1::DataType dtype = mEngine->getBindingDataType(i);
+        const char*        name  = mEngine->getBindingName(i);
         int64_t            totalSize = 0;
         if (mIsDynamicShape)
+            // dims are now concrete (e.g. [32, 1000, 4]); divide by batch to
+            // get the per-image size stored in mBindingSize.
             totalSize = volume(dims) * getElementSize(dtype) / dims.d[0];
         else
             totalSize = volume(dims) * getElementSize(dtype);
@@ -431,7 +466,7 @@ void Trt::InitEngine()
             oss << dims.d[j] << " x ";
         }
         oss << "\b\b";
-        size_t maxSize = totalSize * mBatchSize;
+        size_t maxSize = static_cast<size_t>(totalSize) * static_cast<size_t>(mBatchSize);
         mBindingPtr[i] = safeCudaMalloc(maxSize);
 
         if (mEngine->bindingIsInput(i))

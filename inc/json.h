@@ -21,7 +21,16 @@ struct ModelParams
 struct RtspUrlParams
 {
     std::string rtsp_url;
-    int         rate;
+    // Controls inference (tracking) frequency for pipeline_bytetrack.
+    // Semantics differ from other pipelines:
+    //   <=1 : run inference on every decoded frame.
+    //    N>1: run inference on 1 out of every N frames (skip factor, not target FPS).
+    //         e.g. rate=2 → track every other frame; rate=3 → track 1 in 3, etc.
+    // The video encoder always uses the full decoded stream regardless of this value.
+    //
+    // Other pipelines (pipeline_one_stage, pipeline_two_stage) still interpret
+    // rate as a target FPS passed directly to the hardware decoder.
+    int rate = -1;
 };
 
 struct GpuRtspGroup

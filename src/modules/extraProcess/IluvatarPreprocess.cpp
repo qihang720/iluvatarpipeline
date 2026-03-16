@@ -16,6 +16,11 @@ struct PreProcessImpl
     int2*                        crprz_d_srcShape = nullptr;
     iluvatar::cropResize::RectA* d_rect           = nullptr;
     int                          rects_size       = 0;
+
+    // Pre-allocated intermediate buffer for CropResize output.
+    // Safe to reuse every frame: both CropResize and CvtNorm run on the same
+    // stream, so the GPU serializes them without a host-side sync in between.
+    SurfaceCudaBuff cached_resize;
 };
 
 template <typename T>
@@ -199,6 +204,10 @@ DetectPreprocessor::DetectPreprocessor(int resize_h, int resize_w, CUcontext con
 
     size_t rectBufSize = maxInputs * sizeof(iluvatar::cropResize::RectA);
     checkCudaErrors(cudaMalloc((void**)&(p_impl->d_rect), rectBufSize));
+
+    // Pre-allocate the intermediate YUV buffer so Process() is allocation-free.
+    p_impl->cached_resize = SurfaceCudaBuff(
+        resize_w, resize_h, YUV420, context, maxInputs, Buffer::Flag::PPYOLOE_CROP_RESIZE_FLAG);
 }
 
 DetectPreprocessor::~DetectPreprocessor()
@@ -256,19 +265,17 @@ SurfaceCudaBuff DetectPreprocessor::Process(std::vector<ViDecSurfaceCudaBuff>& i
         logger->error("[{} {}]: batch {} > limit batch {} !!!\n", __FUNCTION__, __LINE__, batch, p_impl->maxinput_);
         return SurfaceCudaBuff();
     }
-    // yuv resize
+    // yuv resize — use pre-allocated intermediate buffer (no cudaMalloc in hot path)
     std::vector<std::vector<Rect>> rects;
+    rects.reserve(inputImage.size());
     for (size_t i = 0; i < inputImage.size(); i++)
     {
-        std::vector<Rect> full_rect = {{0, 0, int(inputImage[i].GetWidth()), int(inputImage[i].GetHeight())}};
-        rects.push_back(full_rect);
+        rects.push_back({{0, 0, int(inputImage[i].GetWidth()), int(inputImage[i].GetHeight())}});
     }
 
-    SurfaceCudaBuff resizeImage(
-        p_impl->resize_w_, p_impl->resize_h_, YUV420, p_impl->ctx_, batch, Buffer::Flag::PPYOLOE_CROP_RESIZE_FLAG);
     if (!CropResizeYuv420P(inputImage,
                            rects,
-                           resizeImage,
+                           p_impl->cached_resize,
                            p_impl->stream,
                            p_impl->crprz_d_src,
                            p_impl->crprz_d_srcShape,
@@ -279,9 +286,11 @@ SurfaceCudaBuff DetectPreprocessor::Process(std::vector<ViDecSurfaceCudaBuff>& i
         return SurfaceCudaBuff();
     }
 
-    // yuv2rgb 1/255 reformat
+    // yuv2rgb + 1/255 normalize + reformat
+    // NOTE: CropResize and CvtNorm are on the same stream, so the GPU guarantees
+    // sequential execution without a host-side sync in between.
     SurfaceCudaBuff outputImage(p_impl->resize_w_, p_impl->resize_h_, RGB_32F_PLANAR, p_impl->ctx_, batch);
-    if (!CvtcolorConvertoNormalizeReformat(resizeImage, outputImage, p_impl->stream))
+    if (!CvtcolorConvertoNormalizeReformat(p_impl->cached_resize, outputImage, p_impl->stream))
     {
         logger->error("[{} {}]: yuv faster kernel fail !!!\n", __FUNCTION__, __LINE__);
         return SurfaceCudaBuff();

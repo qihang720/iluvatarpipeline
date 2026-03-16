@@ -18,16 +18,24 @@ link_directories(/usr/local/corex/lib64)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale libswresample)
 
+# 包含OpenCV库
+find_package(OpenCV REQUIRED)
+
+# 包含Eigen库
+find_package(Eigen3 REQUIRED)
+
+# spdlog -- installed via: apt install libspdlog-dev
+find_package(spdlog REQUIRED)
 
 # 包含头文件目录
-include_directories(inc)
+include_directories(inc ${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-file(GLOB SRC_FILES src/*.cpp src/*/*.cpp  src/*/*/*.cpp src/*/*/*.cu)
+file(GLOB SRC_FILES src/*.cpp src/apps/*.cpp src/modules/*/*.cpp src/modules/*/*/*.cpp src/common/*/*.cpp src/*/*/*.cu)
 
 add_library(ix_pipeline_help SHARED ${SRC_FILES})
 
-target_link_libraries(ix_pipeline_help ${FFMPEG_LIBRARIES} spdlog fmt ixrt ixrt_plugin ixrtonnxparser nvjpeg nvcuvid cuda cudart)
+target_link_libraries(ix_pipeline_help ${FFMPEG_LIBRARIES} ${OpenCV_LIBS} spdlog::spdlog fmt ixrt ixrt_plugin ixrtonnxparser nvjpeg nvcuvid cuda cudart)
 
 add_subdirectory(test)

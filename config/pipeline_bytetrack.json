@@ -1,0 +1,22 @@
+{
+    "jpeg_maxBatch": 8,
+    "jpeg_qsz": 64,
+    "dec_qsz": 128,
+    "encode_output_dir": "./track_output",
+    "bytetrack_params": {
+        "resize_h": 608,
+        "resize_w": 1088,
+        "pre_maxBatch": 4,
+        "pre_qsz": 16,
+        "infer_maxBatch": 32,
+        "infer_qsz": 64,
+        "custom_outputs": [
+            "num_detections",
+            "detection_boxes",
+            "detection_scores",
+            "detection_classes"
+        ],
+        "onnx_file": "../models/bytetrack/bytetrack_s_with_decoder_nms.onnx",
+        "engine_file": "../models/bytetrack/bytetrack_s_with_decoder_nms_b32.engine"
+    }
+}

@@ -1,3 +1,5 @@
 build/
 *.o
 log/
+*.engine
+*.onnx

@@ -52,28 +52,6 @@ static int RestartVideoStream(std::map<int, VideoStreamProcessor*>& VideoStreamP
     return ret;
 }
 
-template <typename T>
-static int waitEnoughBatch(ProcessQueue<T>* queue, int batch, int delay_time, bool exit_signal)
-{
-    int timeout = 0;
-    int t_batch = 0;
-    while (timeout < 100)
-    {
-        if (exit_signal)
-        {
-            printf("%s %d \n", __FUNCTION__, __LINE__);
-            return 0;
-        }
-        t_batch = queue->size();
-        if (t_batch >= batch)
-            return batch;
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay_time));
-
-        ++timeout;
-    }
-    return t_batch;
-}
-
 template <class T>
 static T clip(T x, T min, T max)
 {

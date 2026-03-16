@@ -16,7 +16,7 @@ struct YoloV5Result
 
 class YoloV5ModelProcessor : public ModelProcessor
 {
-private:
+protected:
     ProcessQueue<ViDecSurfaceCudaBuff>* _video_queue;
     ProcessQueue<ViDecSurfaceCudaBuff>* _jpeg_queue;
     ProcessQueue<YoloV5Result>*         _res_queue;

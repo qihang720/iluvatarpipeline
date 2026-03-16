@@ -13,6 +13,7 @@
 
 #include "FFmpegDemuxer.h"
 #include <cassert>
+#include <cerrno>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -415,21 +416,26 @@ bool FFmpegDemuxer::Demux(uint8_t*&   pVideo,
 
     if (ret < 0)
     {
-        if (-110 == ret)
+        if (AVERROR_EOF == ret)
         {
-            is_ConnectTimeout = true;
+            is_EOF = true;
+        }
+        else if ((fmtc) && (fmtc->pb) && (fmtc->pb->eof_reached == true))
+        {
+            is_EOF = true;
             cerr << "Failed to read frame: " << AvErrorToString(ret) << endl;
         }
-        else if (AVERROR_EOF != ret)
+        else if (ret == AVERROR(ETIMEDOUT)           // -110: TCP/RTSP connection timeout
+                 || ret == AVERROR_EXIT)             // interrupt callback fired (open/read timeout)
         {
-            // No need to report EOF;
-            if ((fmtc) && (fmtc->pb) && (fmtc->pb->eof_reached == true))
-                is_EOF = true;
-            cerr << "Failed to read frame: " << AvErrorToString(ret) << endl;
+            is_ConnectTimeout = true;
+            cerr << "Failed to read frame (timeout): " << AvErrorToString(ret) << endl;
         }
         else
         {
-            is_EOF = true;
+            // Other errors (e.g. UDP packet loss, I/O error): log but do not mark
+            // as timeout or EOF so SendBitStream can retry via read_times counter.
+            cerr << "Failed to read frame: " << AvErrorToString(ret) << " (" << ret << ")" << endl;
         }
         return false;
     }

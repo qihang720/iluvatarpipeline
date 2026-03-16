@@ -160,10 +160,15 @@ int IluvatarVideoDecoder::DecodeSatus()
         return -2;
     }
 
-    if (p_impl->decoder_finish.load() & p_impl->eos_set.load())
+    if (p_impl->decoder_finish.load())
     {
-        logger->warn("[{} {}]: dec:{}, frame all pop and eos get \n", __FUNCTION__, __LINE__, p_impl->id);
-        return 1;
+        if (p_impl->eos_set.load())
+            logger->warn("[{} {}]: dec:{}, frame all pop and eos get \n",
+                        __FUNCTION__, __LINE__, p_impl->id);
+        else
+            logger->warn("[{} {}]: dec:{}, decoder finished (VPU error, no demuxer EOF) \n",
+                        __FUNCTION__, __LINE__, p_impl->id);
+        return 1;   // 无论 eos_set 是否为 true，都触发重启
     }
 
     return 0;
@@ -183,24 +188,6 @@ void IluvatarVideoDecoder::GetFrame2Queue(ProcessQueue<ViDecSurfaceCudaBuff>* m_
         while (!p_impl->thread_get.get_status())
         {
             uint64_t currentTimestamp = GetCpuTimestamp();
-            /*
-            uint64_t elapsedTime = currentTimestamp - startTimestamp;
-            if (elapsedTime >= 10 * kSecondsToNanos)
-            {
-                // std::cout << "Current CPU Timestamp: " << currentTimestamp << " ns"
-            << std::endl; float t_all = ((float)(currentTimestamp - total_time) /
-            kSecondsToNanos); float tmp_ = ((float)elapsedTime / kSecondsToNanos);
-                float qps = ((float)index_10) / tmp_;
-
-                std::thread::id thisthread_id = std::this_thread::get_id();
-                printf("decoder:%d, Total time:%0.2f, Current Time:%0.2f, imgs:%d,
-            qps:%0.2f, q_size:%ld \n", p_impl->id, t_all, tmp_,
-            p_impl->m_nDecodedFrame.load(), qps, p_impl->m_DecFramesCtxQueue.size());
-                // 更新起始时间戳
-                startTimestamp = currentTimestamp;
-                index_10 = 0;
-            }
-            */
 
             CUVIDPROCPARAMS pVPP;
             unsigned int    nPitch = 0;
@@ -485,7 +472,7 @@ int IluvatarVideoDecoder::StopVideoSource() noexcept
     return 0;
 }
 
-void OnStreamChangedCallback(CUVIDFormat* pFormat) {
+void OnStreamChangedCallback(void* userData, CUVIDFormat* pFormat) {
     try
     {
         printf("Resolution changed to %dx%d\n", pFormat->picWidth, pFormat->picHeight);
@@ -527,7 +514,7 @@ IluvatarVideoDecoder::IluvatarVideoDecoder(CUcontext cuContext, int eCodec, CUst
 
     CUVIDCALLBACK g_callback = { .pOnStreamChanged = OnStreamChangedCallback };
 
-    checkCudaErrors(cuvidRegisterCallback(&(p_impl->m_hDecoder), &g_callback));
+    checkCudaErrors(cuvidRegisterCallback(&(p_impl->m_hDecoder), nullptr, &g_callback));
 }
 
 IluvatarVideoDecoder::~IluvatarVideoDecoder()

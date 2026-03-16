@@ -1,0 +1,13 @@
+{
+    "gpu_devices": [
+        {
+            "device_id": 0,
+            "rtsp_params": [
+                {
+                    "rtsp_url": "rtsp://10.207.16.30:554/test/palace.mp4",
+                    "rate": 2
+                }
+            ]
+        }
+    ]
+}
